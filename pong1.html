@@ -44,66 +44,160 @@
 
     <script>
         // --- Game Setup ---
-        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const GAME_WIDTH = 800;
+        const GAME_HEIGHT = 600;
 
-        // Set the internal resolution of the canvas
+        // Set the internal resolution of the canvas (drawing size)
+        canvas.width = GAME_WIDTH;
+        canvas.height = GAME_HEIGHT;
         
         // --- Game Constants ---
-        
+        const PADDLE_WIDTH = 15;
+        const PADDLE_HEIGHT = 100;
+        const BALL_SIZE = 15;
+        const PADDLE_SPEED = 8;
+        const BALL_START_SPEED = 5;
+
         // --- Game State Variables ---
-         // Object to store pressed keys
+        let keysPressed = {}; // Object to store pressed keys
+        let playerWins = 0;
+        let aiWins = 0;
 
         // --- Game Objects (Factories) ---
-        
-        
+        function createPaddle(x, y, width, height, color) {
+            return { x, y, width, height, color, dy: 0 };
+        }
+
+        function createBall(x, y, size, color) {
+            return { x, y, size, color, dx: BALL_START_SPEED, dy: BALL_START_SPEED };
+        }
+
+        let playerPaddle = createPaddle(20, GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2, PADDLE_WIDTH, PADDLE_HEIGHT, '#fff');
+        let aiPaddle = createPaddle(GAME_WIDTH - 20 - PADDLE_WIDTH, GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2, PADDLE_WIDTH, PADDLE_HEIGHT, '#fff');
+        let ball = createBall(GAME_WIDTH / 2, GAME_HEIGHT / 2, BALL_SIZE, '#fff');
         
         // --- Drawing Functions ---
+
+        function drawGame() {
             // 1. Clear the canvas
+            ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
             // 2. Draw Score & Middle Line
-        
+            ctx.fillStyle = '#fff';
+            ctx.font = "30px 'Press Start 2P'";
+            ctx.fillText(playerWins, GAME_WIDTH / 4, 50);
+            ctx.fillText(aiWins, 3 * GAME_WIDTH / 4 - 30, 50);
+            
+            // Draw dotted line
+            ctx.beginPath();
+            ctx.setLineDash([10, 10]);
+            ctx.moveTo(GAME_WIDTH / 2, 0);
+            ctx.lineTo(GAME_WIDTH / 2, GAME_HEIGHT);
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+
             // 3. Draw Player Paddle
+            ctx.fillRect(playerPaddle.x, playerPaddle.y, playerPaddle.width, playerPaddle.height);
             
             // 4. Draw AI Paddle
+            ctx.fillRect(aiPaddle.x, aiPaddle.y, aiPaddle.width, aiPaddle.height);
             
             // 5. Draw Ball
-        
-        
-            // Draw dotted line
+            ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+        }
         
         // --- Update Functions ---
-        
-        
-        
-        
+        function updateGame() {
+            // Update Paddle Positions
+            // Player movement
+            if (keysPressed['ArrowUp'] && playerPaddle.y > 0) {
+                playerPaddle.y -= PADDLE_SPEED;
+            }
+            if (keysPressed['ArrowDown'] && playerPaddle.y < GAME_HEIGHT - playerPaddle.height) {
+                playerPaddle.y += PADDLE_SPEED;
+            }
+
+            // Simple AI movement
+            if (aiPaddle.y + aiPaddle.height / 2 < ball.y) {
+                aiPaddle.y += PADDLE_SPEED * 0.7; // Slightly slower AI speed
+            } else if (aiPaddle.y + aiPaddle.height / 2 > ball.y) {
+                aiPaddle.y -= PADDLE_SPEED * 0.7;
+            }
+            // Constrain AI paddle
+            aiPaddle.y = Math.max(0, Math.min(aiPaddle.y, GAME_HEIGHT - aiPaddle.height));
+
+
+            // Update Ball Position
+            ball.x += ball.dx;
+            ball.y += ball.dy;
         
             // Wall collision (Top/Bottom)
+            if (ball.y <= 0 || ball.y + ball.size >= GAME_HEIGHT) {
+                ball.dy *= -1;
+            }
         
-            // Paddle collision
-        
+            // Paddle collision check (Simplified Axis-Aligned Bounding Box collision)
+            // Player Paddle Collision
+            if (isColliding(ball, playerPaddle)) {
+                ball.dx *= -1;
                 // Optional: Increase speed slightly
                 // ball.dx *= 1.05; 
                 // ball.dy *= 1.05;
+            }
+            // AI Paddle Collision
+            if (isColliding(ball, aiPaddle)) {
+                ball.dx *= -1;
+            }
         
-            // Score check
-        
+            // Score check (Ball goes off screen)
+            if (ball.x < 0) {
+                aiWins++;
+                resetBall();
+            } else if (ball.x + ball.size > GAME_WIDTH) {
+                playerWins++;
+                resetBall();
+            }
+        }
 
         // --- Collision Utility ---
-        
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.size > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.size > rect2.y;
+        }
 
-        // --- Game State ---
-        
+        function resetBall() {
+            ball.x = GAME_WIDTH / 2;
+            ball.y = GAME_HEIGHT / 2;
+            // Reverse direction for who scored
+            ball.dx = -ball.dx; 
+            ball.dy = BALL_START_SPEED; // Reset Y speed
+        }
 
-        
-            // Start the game loop
-        
         // --- Main Game Loop ---
-        
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop); // Start the game loop again for the next frame
+        }
 
         // --- Event Listeners ---
-        
+        document.addEventListener('keydown', (e) => {
+            keysPressed[e.key] = true;
+        });
 
-        // --- Start Game ---
+        document.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
         
+        // --- Start Game ---
+        gameLoop();
     </script>
 </body>
 </html>
