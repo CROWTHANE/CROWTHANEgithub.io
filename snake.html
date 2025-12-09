@@ -176,7 +176,7 @@
 
             // Check if the snake ate the food
             if (head.x === food.x && head.y === food.y) {
-                score += 10;
+                score += 1;
                 scoreElement.textContent = 'Score: ' + score;
                 generateFood(); // Create new food
                 // Don't pop the tail, making the snake grow
